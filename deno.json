@@ -11,7 +11,8 @@
     "lint:secrets": "deno run -A npm:@secretlint/quick-start \"**/*\""
   },
   "imports": {
-    "@mizchi/readability": "npm:@mizchi/readability@^0.7.7"
+    "@mizchi/readability": "npm:@mizchi/readability@^0.7.7",
+    "js-yaml": "npm:js-yaml@^4.1.1"
   },
   "compilerOptions": {
     "strict": true

@@ -1,5 +1,5 @@
 import * as fs from "node:fs/promises";
-import YAML from "npm:js-yaml";
+import YAML from "js-yaml";
 
 interface Frontmatter {
   source_url?: string;
