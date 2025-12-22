@@ -16,6 +16,7 @@
   "compilerOptions": {
     "strict": true
   },
+  "license": "MIT",
   "lint": {
     "rules": {
       "exclude": [
