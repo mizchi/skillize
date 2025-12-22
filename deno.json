@@ -1,0 +1,22 @@
+{
+  "name": "@mizchi/skillize",
+  "version": "0.1.0",
+  "exports": "./mod.ts",
+  "tasks": {
+    "start": "deno run --allow-read --allow-write --allow-run --allow-net main.ts",
+    "check": "deno check main.ts"
+  },
+  "imports": {
+    "@mizchi/readability": "npm:@mizchi/readability@^0.7.7"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "no-unversioned-import"
+      ]
+    }
+  }
+}
