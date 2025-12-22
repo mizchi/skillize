@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "Running secretlint..."
+deno run -A npm:@secretlint/quick-start "**/*"
+if [ $? -ne 0 ]; then
+  echo "❌ secretlint found potential secrets. Commit aborted."
+  exit 1
+fi
+echo "✅ No secrets detected."

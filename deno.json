@@ -4,7 +4,8 @@
   "exports": "./mod.ts",
   "tasks": {
     "start": "deno run --allow-read --allow-write --allow-run --allow-net main.ts",
-    "check": "deno check main.ts"
+    "check": "deno check main.ts",
+    "lint:secrets": "deno run -A npm:@secretlint/quick-start \"**/*\""
   },
   "imports": {
     "@mizchi/readability": "npm:@mizchi/readability@^0.7.7"
