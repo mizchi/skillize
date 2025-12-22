@@ -72,6 +72,19 @@ deno run -A scripts/cli.ts search "<query>" --json
 deno run -A scripts/cli.ts help
 ```
 
+## 開発
+
+```bash
+# クローン後のセットアップ (pre-commit hook を有効化)
+git config core.hooksPath .githooks
+
+# 型チェック
+deno task check
+
+# シークレットチェック (pre-commit でも自動実行)
+deno task lint:secrets
+```
+
 ## ライセンス
 
 MIT
