@@ -1,70 +1,78 @@
 # @mizchi/skillize
 
-**ドキュメントサイトを Claude Agent Skill に変換するツール**
+**Convert documentation sites into Claude Agent Skills**
 
-[laiso/site2skill](https://github.com/laiso/site2skill) の Deno 移植版です。
-[agentskills.io](https://agentskills.io/specification) 仕様に準拠しています。
+A Deno port of [laiso/site2skill](https://github.com/laiso/site2skill).
+Original article: [site2skill - ドキュメントサイトを Claude Code Skill に変換するツール](https://blog.lai.so/site2skill/)
 
-## 必要条件
+Compliant with the [agentskills.io](https://agentskills.io/specification) specification.
 
-- Deno 2.0+
-- wget (サイトのダウンロードに使用)
-- zip (パッケージングに使用)
-
-## 使い方
+## Installation
 
 ```bash
-# 基本的な使い方 (プロジェクトローカルにインストール)
-deno run -A main.ts <URL> <SKILL_NAME>
-
-# ユーザー全体にインストール (~/.claude/skills/)
-deno run -A main.ts <URL> <SKILL_NAME> --user
-
-# 特定のディレクトリのみ取得
-deno run -A main.ts <URL> <SKILL_NAME> -I /guides/ -I /api/
-
-# 前回のダウンロードを再利用
-deno run -A main.ts <URL> <SKILL_NAME> --skip-fetch
+deno install -g -A jsr:@mizchi/skillize
 ```
 
-## オプション
+## Requirements
+
+- Deno 2.0+
+- wget (for downloading sites)
+- zip (for packaging)
+
+## Usage
+
+```bash
+# Basic usage (install to project local)
+skillize <URL> <SKILL_NAME>
+
+# Install user-wide (~/.claude/skills/)
+skillize <URL> <SKILL_NAME> --user
+
+# Include only specific directories
+skillize <URL> <SKILL_NAME> -I /guides/ -I /api/
+
+# Reuse previous download
+skillize <URL> <SKILL_NAME> --skip-fetch
+```
+
+## Options
 
 ```
---local            プロジェクトの .claude/skills にインストール (デフォルト)
---user             ~/.claude/skills にインストール (ユーザー全体)
---output, -o       カスタム出力ディレクトリ (--local/--user を上書き)
---include, -I      指定ディレクトリのみ取得 (複数指定可)
---exclude, -X      指定ディレクトリを除外 (複数指定可)
---skill-output     .skill ファイルの出力ディレクトリ (デフォルト: dist)
---temp-dir         処理用の一時ディレクトリ (デフォルト: build)
---skip-fetch       ダウンロードをスキップ
---clean            完了後に一時ディレクトリを削除
---help, -h         ヘルプを表示
+--local            Install to project's .claude/skills (default)
+--user             Install to ~/.claude/skills (user-wide)
+--output, -o       Custom output directory (overrides --local/--user)
+--include, -I      Include only specified directories (can be repeated)
+--exclude, -X      Exclude specified directories (can be repeated)
+--skill-output     Output directory for .skill file (default: dist)
+--temp-dir         Temporary directory for processing (default: build)
+--skip-fetch       Skip download step
+--clean            Remove temporary directory after completion
+--help, -h         Show help
 ```
 
-## 仕組み
+## How It Works
 
-1. **Fetch**: `wget` でドキュメントサイトを再帰的にダウンロード
-2. **Convert**: HTML から本文を抽出し Markdown に変換 (@mizchi/readability)
-3. **Normalize**: リンクを絶対 URL に正規化
-4. **Generate**: agentskills.io 仕様のスキル構造を生成
-5. **Validate**: スキル構造と名前規則をチェック
-6. **Package**: .skill ファイルにパッケージ
+1. **Fetch**: Recursively download documentation site using `wget`
+2. **Convert**: Extract content from HTML and convert to Markdown (@mizchi/readability)
+3. **Normalize**: Convert links to absolute URLs
+4. **Generate**: Create skill structure per agentskills.io specification
+5. **Validate**: Check skill structure and naming conventions
+6. **Package**: Bundle into .skill file
 
-## 出力構造 (agentskills.io 仕様)
+## Output Structure (agentskills.io spec)
 
 ```
 <skill-name>/
-├── SKILL.md           # スキル定義 (name, description 必須)
-├── references/        # Markdown ドキュメント
+├── SKILL.md           # Skill definition (name, description required)
+├── references/        # Markdown documents
 │   └── *.md
 └── scripts/
-    └── cli.ts         # 検索 CLI (Deno)
+    └── cli.ts         # Search CLI (Deno)
 ```
 
-## スキル CLI
+## Skill CLI
 
-生成されたスキルには検索 CLI が含まれます:
+Generated skills include a search CLI:
 
 ```bash
 deno run -A scripts/cli.ts search "<query>"
@@ -72,19 +80,19 @@ deno run -A scripts/cli.ts search "<query>" --json
 deno run -A scripts/cli.ts help
 ```
 
-## 開発
+## Development
 
 ```bash
-# クローン後のセットアップ (pre-commit hook を有効化)
+# Setup after cloning (enable pre-commit hook)
 git config core.hooksPath .githooks
 
-# 型チェック
+# Type check
 deno task check
 
-# シークレットチェック (pre-commit でも自動実行)
+# Secret check (also runs on pre-commit)
 deno task lint:secrets
 ```
 
-## ライセンス
+## License
 
 MIT

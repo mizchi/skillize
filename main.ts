@@ -7,7 +7,7 @@ import { parseArgs } from "node:util";
 import { fetchSite } from "./fetch_site.ts";
 import { convertHtmlToMd } from "./convert_to_markdown.ts";
 import { normalizeMarkdown } from "./normalize_markdown.ts";
-import { generateSkillStructure } from "./generate_skill_structure.ts";
+import { generateSkillStructure, type GenerationInfo } from "./generate_skill_structure.ts";
 import { validateSkill } from "./validate_skill.ts";
 import { packageSkill } from "./package_skill.ts";
 
@@ -180,7 +180,21 @@ async function main(): Promise<void> {
     logger.info(`=== Step 4: Generating Skill Structure ===`);
     const scriptDir = path.dirname(fileURLToPath(import.meta.url));
     const templateDir = path.join(scriptDir, "templates");
-    await generateSkillStructure(skillName, tempMdDir, outputBase, templateDir);
+
+    // Build command string for documentation
+    const cmdParts = ["skillize", url, skillName];
+    if (values.user) cmdParts.push("--user");
+    if (values.output) cmdParts.push("-o", values.output as string);
+    if (includeDirs) includeDirs.forEach((d) => cmdParts.push("-I", d));
+    if (excludeDirs) excludeDirs.forEach((d) => cmdParts.push("-X", d));
+
+    const generationInfo: GenerationInfo = {
+      sourceUrl: url,
+      command: cmdParts.join(" "),
+      generatedAt: fetchedAt,
+    };
+
+    await generateSkillStructure(skillName, tempMdDir, outputBase, templateDir, generationInfo);
 
     const skillDir = path.join(outputBase, skillName);
 

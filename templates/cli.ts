@@ -33,6 +33,7 @@ import YAML from "npm:js-yaml";
 const SCRIPTS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.dirname(SCRIPTS_DIR);
 const REFERENCES_DIR = path.join(SKILL_DIR, "references");
+const RESOURCE_CONFIG_PATH = path.join(SKILL_DIR, "resource.json");
 
 // ============================================================================
 // Utilities
@@ -58,6 +59,39 @@ interface SearchResult {
   contexts: string[];
   source_url: string;
   fetched_at: string;
+}
+
+interface ResourceConfig {
+  name: string;
+  path: string;
+  description?: string;
+}
+
+interface ResourceConfigFile {
+  resources: ResourceConfig[];
+}
+
+async function loadResourceConfig(): Promise<ResourceConfigFile | null> {
+  try {
+    const content = await fs.readFile(RESOURCE_CONFIG_PATH, "utf-8");
+    return JSON.parse(content) as ResourceConfigFile;
+  } catch {
+    return null;
+  }
+}
+
+function getSearchDirs(config: ResourceConfigFile | null, resourceFilter?: string[]): string[] {
+  if (!config || config.resources.length === 0) {
+    return [REFERENCES_DIR];
+  }
+
+  if (!resourceFilter || resourceFilter.length === 0) {
+    return config.resources.map((r) => path.join(REFERENCES_DIR, r.path));
+  }
+
+  return config.resources
+    .filter((r) => resourceFilter.includes(r.name))
+    .map((r) => path.join(REFERENCES_DIR, r.path));
 }
 
 async function* walkFiles(dir: string, exts?: string[]): AsyncGenerator<string> {
@@ -140,18 +174,29 @@ function getContext(text: string, query: string, contextLines = 2): string[] {
   return contexts;
 }
 
-async function searchDocs(query: string, maxResults = 10): Promise<SearchResult[]> {
-  try {
-    await fs.access(REFERENCES_DIR);
-  } catch {
-    console.error(`Error: ${REFERENCES_DIR} not found.`);
+async function searchDocs(query: string, maxResults = 10, searchDirs?: string[]): Promise<SearchResult[]> {
+  const dirsToSearch = searchDirs || [REFERENCES_DIR];
+  const validDirs: string[] = [];
+
+  for (const dir of dirsToSearch) {
+    try {
+      await fs.access(dir);
+      validDirs.push(dir);
+    } catch {
+      // Skip non-existent directories
+    }
+  }
+
+  if (validDirs.length === 0) {
+    console.error(`Error: No valid directories to search.`);
     return [];
   }
 
   const keywords = query.toLowerCase().split(/\s+/);
   const results: SearchResult[] = [];
 
-  for await (const filePath of walkFiles(REFERENCES_DIR, [".md"])) {
+  for (const searchDir of validDirs) {
+    for await (const filePath of walkFiles(searchDir, [".md"])) {
     try {
       const content = await fs.readFile(filePath, "utf-8");
       const [frontmatter, body] = extractFrontmatter(content);
@@ -177,6 +222,7 @@ async function searchDocs(query: string, maxResults = 10): Promise<SearchResult[
       }
     } catch (e) {
       console.error(`Error reading ${filePath}: ${e}`);
+    }
     }
   }
 
@@ -213,19 +259,24 @@ async function cmdSearch(args: string[]): Promise<void> {
     args,
     options: {
       "max-results": { type: "string", short: "n" },
+      resource: { type: "string", short: "r", multiple: true },
       json: { type: "boolean" },
     },
     allowPositionals: true,
   });
 
   if (positionals.length === 0) {
-    console.error("Usage: cli.ts search <query> [-n <max>] [--json]");
+    console.error("Usage: cli.ts search <query> [-n <max>] [-r <resource>...] [--json]");
     Deno.exit(1);
   }
 
   const query = positionals.join(" ");
   const maxResults = parseInt(values["max-results"] || "10", 10);
-  const results = await searchDocs(query, maxResults);
+  const resourceFilter = values.resource as string[] | undefined;
+
+  const config = await loadResourceConfig();
+  const searchDirs = getSearchDirs(config, resourceFilter);
+  const results = await searchDocs(query, maxResults, searchDirs);
 
   if (values.json) {
     console.log(JSON.stringify(results, null, 2));
@@ -268,6 +319,44 @@ async function cmdUpdate(): Promise<void> {
 }
 
 // ============================================================================
+// Resources Command
+// ============================================================================
+
+async function cmdResources(): Promise<void> {
+  const config = await loadResourceConfig();
+
+  if (!config || config.resources.length === 0) {
+    console.log("No resource.json found or no resources defined.");
+    console.log(`Default search directory: ${REFERENCES_DIR}`);
+    return;
+  }
+
+  console.log(`\n${Colors.HEADER}Available Resources${Colors.ENDC}\n`);
+
+  for (const resource of config.resources) {
+    const resourceDir = path.join(REFERENCES_DIR, resource.path);
+    let fileCount = 0;
+    try {
+      for await (const _ of walkFiles(resourceDir, [".md"])) {
+        fileCount++;
+      }
+    } catch {
+      // Directory doesn't exist
+    }
+
+    console.log(`${Colors.BOLD}${resource.name}${Colors.ENDC}`);
+    console.log(`  Path: references/${resource.path}`);
+    if (resource.description) {
+      console.log(`  Description: ${resource.description}`);
+    }
+    console.log(`  Files: ${fileCount} markdown files`);
+    console.log("");
+  }
+
+  console.log(`${Colors.CYAN}Use -r <name> to filter search by resource.${Colors.ENDC}`);
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 
@@ -279,16 +368,20 @@ Usage:
 
 Commands:
   search <query>  Search documentation
+  resources       List available resources
   update          Show update instructions
   help            Show this help
 
 Search Options:
-  --max-results, -n  Maximum number of results (default: 10)
-  --json             Output as JSON
+  --max-results, -n    Maximum number of results (default: 10)
+  --resource, -r       Filter by resource name (can be repeated)
+  --json               Output as JSON
 
 Examples:
   deno run -A cli.ts search "validation"
   deno run -A cli.ts search schema -n 5 --json
+  deno run -A cli.ts search api -r core -r utils
+  deno run -A cli.ts resources
 `);
 }
 
@@ -299,6 +392,9 @@ async function main(): Promise<void> {
   switch (command) {
     case "search":
       await cmdSearch(args);
+      break;
+    case "resources":
+      await cmdResources();
       break;
     case "update":
       await cmdUpdate();
