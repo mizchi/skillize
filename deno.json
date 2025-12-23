@@ -1,6 +1,6 @@
 {
   "name": "@mizchi/skillize",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "exports": {
     ".": "./main.ts",
     "./lib": "./mod.ts"
@@ -8,6 +8,7 @@
   "tasks": {
     "start": "deno run --allow-read --allow-write --allow-run --allow-net main.ts",
     "check": "deno check main.ts",
+    "test": "deno test --allow-read --allow-write --allow-sys",
     "lint:secrets": "deno run -A npm:@secretlint/quick-start \"**/*\""
   },
   "imports": {

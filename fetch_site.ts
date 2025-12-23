@@ -1,20 +1,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { exists, isValidHttpUrl } from "./utils.ts";
 
 const logger = {
   info: (msg: string) => console.log(`[INFO] ${msg}`),
   warning: (msg: string) => console.warn(`[WARN] ${msg}`),
   error: (msg: string) => console.error(`[ERROR] ${msg}`),
 };
-
-async function exists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function checkWgetInstalled(): Promise<boolean> {
   try {
@@ -32,25 +24,12 @@ export interface FetchOptions {
 }
 
 export async function fetchSite(url: string, outputDir: string, options: FetchOptions = {}): Promise<void> {
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(url);
-  } catch {
-    logger.error(`Invalid URL: ${url}`);
+  const urlResult = isValidHttpUrl(url);
+  if (!urlResult.valid) {
+    logger.error(urlResult.error);
     Deno.exit(1);
   }
-
-  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-    logger.error(
-      `Invalid URL scheme: ${parsedUrl.protocol}. Only 'http' and 'https' are supported.`
-    );
-    Deno.exit(1);
-  }
-
-  if (!parsedUrl.hostname) {
-    logger.error(`Invalid URL: ${url}. Domain is missing.`);
-    Deno.exit(1);
-  }
+  const parsedUrl = urlResult.parsed;
 
   if (!(await checkWgetInstalled())) {
     logger.error("wget is not installed. Please install wget to use this tool.");

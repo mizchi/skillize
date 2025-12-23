@@ -6,7 +6,7 @@ interface Frontmatter {
   [key: string]: unknown;
 }
 
-function extractFrontmatter(content: string): Frontmatter | null {
+export function extractFrontmatter(content: string): Frontmatter | null {
   const match = content.match(/^---\n(.*?)\n---\n/s);
   if (match) {
     try {
@@ -22,7 +22,7 @@ function extractFrontmatter(content: string): Frontmatter | null {
   return null;
 }
 
-function normalizeLinks(mdContent: string, sourceUrl: string): string {
+export function normalizeLinks(mdContent: string, sourceUrl: string): string {
   return mdContent.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (match, text, url) => {
     if (url.startsWith("http:") || url.startsWith("https:") || url.startsWith("mailto:") || url.startsWith("#")) {
       return match;

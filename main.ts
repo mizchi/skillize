@@ -1,7 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { fetchSite } from "./fetch_site.ts";
@@ -10,37 +9,13 @@ import { normalizeMarkdown } from "./normalize_markdown.ts";
 import { generateSkillStructure, type GenerationInfo } from "./generate_skill_structure.ts";
 import { validateSkill } from "./validate_skill.ts";
 import { packageSkill } from "./package_skill.ts";
+import { exists, walkFiles } from "./utils.ts";
 
 const logger = {
   info: (msg: string) => console.log(`[INFO] ${msg}`),
   warning: (msg: string) => console.warn(`[WARN] ${msg}`),
   error: (msg: string) => console.error(`[ERROR] ${msg}`),
 };
-
-async function exists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function* walkFiles(dir: string, exts?: string[]): AsyncGenerator<string> {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      yield* walkFiles(fullPath, exts);
-    } else if (entry.isFile()) {
-      if (exts) {
-        const ext = path.extname(entry.name);
-        if (!exts.some((e) => ext === e || ext === `.${e}`)) continue;
-      }
-      yield fullPath;
-    }
-  }
-}
 
 function showHelp(): void {
   console.log(`site2skill - Turn any documentation website into a Claude Agent Skill
@@ -142,6 +117,9 @@ async function main(): Promise<void> {
     const parsedInputUrl = new URL(url);
     const scheme = parsedInputUrl.protocol.replace(":", "");
 
+    let convertedCount = 0;
+    let skippedCount = 0;
+
     for (const htmlFile of htmlFiles) {
       const absHtmlFile = path.resolve(htmlFile);
       const absCrawlDir = path.resolve(crawlDir);
@@ -166,11 +144,15 @@ async function main(): Promise<void> {
 
       const mdPath = path.join(tempMdDir, nameWithoutExt + ".md");
       if (await exists(mdPath)) {
-        logger.warning(`Name collision for ${nameWithoutExt}.md. Overwriting.`);
+        skippedCount++;
+        continue; // Skip already converted files
       }
 
       await convertHtmlToMd(htmlFile, mdPath, sourceUrl, fetchedAt);
+      convertedCount++;
     }
+
+    logger.info(`Converted ${convertedCount} files, skipped ${skippedCount} cached files.`);
 
     logger.info(`=== Step 3: Normalizing Markdown ===`);
     for await (const mdFile of walkFiles(tempMdDir, [".md"])) {
@@ -178,7 +160,7 @@ async function main(): Promise<void> {
     }
 
     logger.info(`=== Step 4: Generating Skill Structure ===`);
-    const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+    const scriptDir = import.meta.dirname!;
     const templateDir = path.join(scriptDir, "templates");
 
     // Build command string for documentation

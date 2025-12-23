@@ -20,7 +20,6 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 // deno-lint-ignore no-external-import
 import YAML from "npm:js-yaml";
@@ -30,7 +29,7 @@ import YAML from "npm:js-yaml";
 // ============================================================================
 
 // scripts/cli.ts -> skill root -> references/
-const SCRIPTS_DIR = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPTS_DIR = import.meta.dirname!;
 const SKILL_DIR = path.dirname(SCRIPTS_DIR);
 const REFERENCES_DIR = path.join(SKILL_DIR, "references");
 const RESOURCE_CONFIG_PATH = path.join(SKILL_DIR, "resource.json");
